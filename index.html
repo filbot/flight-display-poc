@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Flight Panel – Interactive</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+        :root {
+                --panel-bg: #484b4f;
+                --panel-edge: #2e3135;
+                --label: #e8e8e8;
+                --oled-bg: #080c08;
+                --oled-green: #18ff47;
+                --tile-off: #f2f2f2;
+                --tile-label: #1e1e1e;
+                --tile-border: #b7b7b7;
+                --mil-off: #c92b2b;
+                --glow-green: #9eff8f;
+                --glow-white: #fffceb;
+                --glow-red: #ff6464;
+            }
+            body {
+                margin: 0;
+                background: #1b1c1f;
+                color: #d6d8dc;
+                font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI,
+                    Roboto, Helvetica, Arial;
+                display: grid;
+                gap: 18px;
+                place-content: start center;
+                padding: 24px;
+            }
+
+            /* Controls (outside panel) */
+            .controls {
+                display: flex;
+                gap: 18px;
+                align-items: center;
+                flex-wrap: wrap;
+                background: #111317;
+                border: 1px solid #2a2d33;
+                padding: 12px 14px;
+                border-radius: 10px;
+            }
+            .controls label {
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+                font-weight: 600;
+            }
+            .controls .group {
+                display: flex;
+                gap: 10px;
+                align-items: center;
+            }
+            .controls .group legend {
+                font-size: 12px;
+                opacity: 0.8;
+                padding-right: 6px;
+            }
+            .controls input {
+                transform: scale(1.15);
+            }
+            button.sim {
+                padding: 6px 10px;
+                border-radius: 8px;
+                border: 1px solid #39414f;
+                background: #161a20;
+                color: #cfd3da;
+                cursor: pointer;
+            }
+
+            /* Panel shell */
+            .panel {
+                width: 780px;
+                height: 370px;
+                position: relative;
+                background: radial-gradient(
+                            28px 28px at 16px 16px,
+                            #999 38%,
+                            #5a5a5a 39% 60%,
+                            #272727 61% 100%
+                        )
+                        no-repeat,
+                    radial-gradient(
+                            28px 28px at calc(100% - 16px) 16px,
+                            #999 38%,
+                            #5a5a5a 39% 60%,
+                            #272727 61% 100%
+                        )
+                        no-repeat,
+                    radial-gradient(
+                            28px 28px at 16px calc(100% - 16px),
+                            #999 38%,
+                            #5a5a5a 39% 60%,
+                            #272727 61% 100%
+                        )
+                        no-repeat,
+                    radial-gradient(
+                            28px 28px at calc(100% - 16px) calc(100% - 16px),
+                            #999 38%,
+                            #5a5a5a 39% 60%,
+                            #272727 61% 100%
+                        )
+                        no-repeat,
+                    var(--panel-bg);
+                background-size: 42px 42px, 42px 42px, 42px 42px, 42px 42px,
+                    auto;
+                background-position: 0 0, 100% 0, 0 100%, 100% 100%;
+                border: 10px solid var(--panel-edge);
+                border-radius: 8px;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45),
+                    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+                padding: 22px;
+            }
+            .label {
+                font-weight: 800;
+                letter-spacing: 0.03em;
+                color: var(--label);
+                text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+            }
+
+            /* POWER */
+            .power-wrap {
+                position: absolute;
+                left: 55px;
+                top: 18px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+            }
+            .power-label {
+                font-size: 30px;
+            }
+            .lamp {
+                margin-top: 10px;
+                width: 84px;
+                height: 84px;
+                border-radius: 50%;
+                background: radial-gradient(
+                    circle at 30% 30%,
+                    #c2ffc2 8%,
+                    #6bd76b 24%,
+                    #2cae2c 65%,
+                    #0c6a0c 100%
+                );
+                border: 2px solid #c7c9c6;
+                box-shadow: inset 0 0 0 3px #7a7c78,
+                    0 1px 0 rgba(255, 255, 255, 0.24);
+                position: relative;
+                transition: box-shadow 0.2s, filter 0.2s, transform 0.2s;
+            }
+            .panel.powered .lamp {
+                background: radial-gradient(
+                    circle at 30% 30%,
+                    #ebffee 18%,
+                    #a9ffb3 35%,
+                    #55ef55 70%,
+                    #1fb61f 100%
+                );
+                box-shadow: 0 0 26px 6px rgba(95, 255, 110, 0.35),
+                    inset 0 0 0 3px #7a7c78, 0 1px 0 rgba(255, 255, 255, 0.24);
+            }
+
+            /* AIRCRAFT TYPE tiles */
+            .type-wrap {
+                position: absolute;
+                right: 55px;
+                top: 18px;
+                width: 420px;
+                height: 128px;
+                border: 2px solid #bfc3c7;
+                border-radius: 6px;
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr;
+                gap: 24px;
+                align-items: center;
+                justify-items: center;
+            }
+            .type-caption-container {
+                background-color: #484b4f;
+                position: absolute;
+                top: -15px;
+                width: 190px;
+            }
+            .type-caption {
+                text-align: center;
+                font-weight: 800;
+                color: var(--label);
+                font-size: 20px;
+                letter-spacing: 0.05em;
+            }
+            .tile {
+                width: 86px;
+                height: 86px;
+                border-radius: 4px;
+                display: grid;
+                place-items: center;
+                background: var(--tile-off);
+                color: var(--tile-label);
+                border: 5px solid var(--tile-border);
+                font-weight: 800;
+                font-size: 28px;
+                position: relative;
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55),
+                    inset 0 -2px 0 rgba(0, 0, 0, 0.12);
+            }
+            .tile.mil {
+                background: var(--mil-off);
+                color: black;
+                border-color: #911b1b;
+            }
+            .tile::after {
+                content: "";
+                position: absolute;
+                inset: -4px;
+                border-radius: 6px;
+                pointer-events: none;
+                opacity: 0;
+                transition: opacity 0.15s ease;
+            }
+            /* Glow only when panel powered AND tile matches active type */
+            .panel.powered[data-type="civ"] .tile.civ::after {
+                box-shadow: 0 0 25px 8px var(--glow-white),
+                    inset 0 0 12px 4px rgba(255, 255, 255, 0.55);
+                opacity: 1;
+            }
+            .panel.powered[data-type="com"] .tile.com::after {
+                box-shadow: 0 0 25px 8px var(--glow-white),
+                    inset 0 0 12px 4px rgba(255, 255, 255, 0.55);
+                opacity: 1;
+            }
+            .panel.powered[data-type="mil"] .tile.mil::after {
+                box-shadow: 0 0 25px 8px var(--glow-red),
+                    inset 0 0 18px 4px rgba(255, 78, 78, 0.65);
+                opacity: 1;
+            }
+
+            /* OLED */
+            .oled {
+                position: absolute;
+                left: 52px;
+                right: 52px;
+                top: 170px;
+                height: 170px;
+                background: var(--oled-bg);
+                border-radius: 4px;
+                box-shadow: inset 0 0 0 2px #0b0b0b,
+                    inset 0 -6px 20px rgba(0, 0, 0, 0.8);
+                padding: 18px 28px;
+                display: grid;
+                grid-template-rows: 1fr auto;
+                gap: 8px;
+                color: var(--oled-green);
+                font-family: "SF Mono", "JetBrains Mono", "Menlo", "Consolas",
+                    ui-monospace, monospace;
+                transition: opacity 0.15s ease;
+            }
+            .row-top {
+                display: grid;
+                grid-template-columns: 1fr auto 1fr;
+                align-items: center;
+            }
+            .panel:not(.powered) .row-top {
+                visibility: hidden;
+            }
+            .apt {
+                text-align: center;
+                font-size: 84px;
+                font-weight: 800;
+                letter-spacing: 0.04em;
+            }
+            .plane {
+                width: 84px;
+                height: 84px;
+                display: grid;
+                place-items: center;
+            }
+            .row-bottom {
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr;
+                align-items: end;
+                gap: 24px;
+                font-weight: 800;
+            }
+            .panel:not(.powered) .row-bottom {
+                visibility: hidden;
+            }
+            .metric {
+                display: grid;
+                justify-items: center;
+                gap: 6px;
+            }
+            .metric .value {
+                font-size: 40px;
+            }
+            .metric .caption {
+                font-size: 20px;
+                color: #c8c8c8;
+                opacity: 0.8;
+                letter-spacing: 0.05em;
+            }
+        </style>
+</head>
+
+<body>
+    <!-- External controls that drive the panel -->
+    <div class="controls">
+        <label>
+            <input id="masterPower" type="checkbox" />
+            Master Power
+        </label>
+        <div class="group" role="group" aria-labelledby="atype">
+            <legend id="atype">Aircraft Type</legend>
+            <label><input name="atype" type="radio" value="civ" checked />
+                CIV</label>
+            <label><input name="atype" type="radio" value="com" /> COM</label>
+            <label><input name="atype" type="radio" value="mil" /> MIL</label>
+        </div>
+        <button class="sim" id="loadSample">Load sample API data</button>
+    </div>
+    <!-- Panel -->
+    <section class="panel" id="panel" data-type="civ" aria-label="Flight panel">
+        <!-- POWER -->
+        <div class="power-wrap">
+            <div class="label power-label">POWER</div>
+            <div class="lamp" aria-hidden="true"></div>
+        </div>
+        <!-- AIRCRAFT TYPE -->
+        <div class="type-wrap" aria-label="Aircraft Type">
+            <div class="type-caption-container">
+                <div class="type-caption">AIRCRAFT TYPE</div>
+            </div>
+            <div class="tile civ"><span>CIV</span></div>
+            <div class="tile com"><span>COM</span></div>
+            <div class="tile mil"><span>MIL</span></div>
+        </div>
+        <!-- OLED -->
+        <div class="oled">
+            <div class="row-top">
+                <div class="apt" id="aptFrom">KLAX</div>
+                <div class="plane" aria-hidden="true">
+                    <svg viewBox="0 0 64 64" width="64" height="64" fill="currentColor">
+                        <path class="cls-1" d="M47.41,30.82L27.77.22c-.09-.14-.24-.22-.41-.22h-3.78c-.16,0-.29.07-.39.19-.1.12-.12.27-.08.42l8.17,30.5c.06.22.25.36.47.36l15.24.09c.18,0,.34-.09.43-.25.09-.16.08-.34-.02-.5h0ZM47.41,35.81l-19.64,30.59c-.09.14-.24.22-.41.22h-3.78c-.16,0-.29-.07-.39-.19-.1-.12-.12-.27-.08-.42l8.17-30.5c.06-.22.25-.36.47-.36l15.24-.09c.18,0,.34.09.43.25.09.16.08.34-.02.5h0Z" />
+                        <path class="cls-1" d="M14.08,32L2.74,21.23c-.1-.09-.22-.14-.35-.14H.51c-.18,0-.33.08-.43.23-.1.15-.11.32-.04.49l4.72,10.74c.08.19.26.31.47.31l8.49.03c.21,0,.4-.12.48-.32.08-.2.03-.42-.12-.56h0ZM14.08,35.08l-11.33,10.77c-.1.09-.22.14-.35.14H.51c-.18,0-.33-.08-.43-.23-.1-.15-.11-.32-.04-.49l4.72-10.74c.08-.19.26-.31.47-.31l8.49-.03c.21,0,.4.12.48.32.08.2.03.42-.12.56h0Z" />
+                        <path class="cls-1" d="M8.49,35.64s-.08,0-.12,0h0c-.05,0-.1,0-.16,0h0c-.05,0-.1,0-.16,0h-.16s0,0,0,0c-.05,0-.1,0-.16,0h0c-.05,0-.1,0-.15,0h0c-.05,0-.1,0-.15,0h0c-.1,0-.2,0-.31,0h0c-.05,0-.1,0-.15,0h0c-.05,0-.1,0-.15,0h0c-.1,0-.2,0-.3,0h0s-.1,0-.15,0h0s-.1,0-.15,0h0s-.1,0-.15,0h0s-.1,0-.15,0h0c-.1,0-.19,0-.29-.01h0s-.1,0-.14,0h0s-.09,0-.14,0h0c-.09,0-.19-.01-.28-.02h0s-.09,0-.14-.01h0s-.09,0-.14-.01h0s-.09,0-.14-.01h0s-.09,0-.13-.01c-.04,0-.09-.01-.13-.02h0s-.09-.01-.13-.02h0s-.09-.01-.13-.02h0s-.09-.01-.13-.02h0s-.08-.01-.13-.02c-.04,0-.08-.02-.13-.02-.04,0-.08-.02-.12-.03-.04,0-.08-.02-.12-.03-.04,0-.08-.02-.12-.03-.08-.02-.16-.04-.24-.06-.04-.01-.08-.02-.12-.04-.15-.05-.3-.1-.44-.16-.04-.01-.07-.03-.11-.05-.07-.03-.14-.06-.21-.1-1.01-.52-1.51-1.06-1.49-1.62.02-.49.45-.99,1.3-1.49.06-.04.13-.07.2-.11.07-.03.14-.07.21-.1.04-.02.07-.03.11-.05.14-.06.29-.11.44-.16.04-.01.08-.02.12-.04.08-.02.16-.04.24-.06.04-.01.08-.02.12-.03.04,0,.08-.02.12-.03.04,0,.08-.02.12-.03.04,0,.08-.02.13-.02.04,0,.08-.02.13-.02h0s.09-.01.13-.02h0s.09-.01.13-.02h0s.09-.01.13-.02h0s.09-.01.13-.02c.04,0,.09-.01.13-.01h0s.09,0,.14-.01h0s.09,0,.14-.01h0s.09,0,.14-.01h0c.09,0,.19-.01.28-.02h0s.09,0,.14,0h0s.09,0,.14,0h0c.1,0,.19,0,.29-.01h0s.1,0,.15,0h0s.1,0,.15,0h0s.1,0,.15,0h0s.1,0,.15,0h0c.1,0,.2,0,.3,0h0c.05,0,.1,0,.15,0h0c.05,0,.1,0,.15,0h0c.1,0,.2,0,.31,0h0c.05,0,.1,0,.15,0h0c.05,0,.1,0,.15,0h0c.05,0,.1,0,.16,0h.16c.05,0,.1,0,.16,0h0c.05,0,.1,0,.16,0h0s.08,0,.12,0v-.83c0-.6.48-1.07,1.07-1.09l36.67-1.5h0s.01,0,.02,0h0c.13,0,.26,0,.39,0h0c.13,0,.26,0,.39,0h0c.13,0,.26,0,.39,0h.38s0,0,0,0c.13,0,.26,0,.38,0h0c.13,0,.25,0,.38,0h0c.13,0,.25,0,.38,0h0c.25,0,.5,0,.76,0h0c.13,0,.25,0,.37,0h0c.12,0,.25,0,.37,0h0c.25,0,.49,0,.74,0h0c.12,0,.24,0,.37,0h0c.12,0,.24,0,.36,0h0c.12,0,.24,0,.36,0h0c.12,0,.24,0,.36.01h0c.24,0,.48.02.71.03h0c.12,0,.23.01.35.02h0c.12,0,.23.01.35.02h0c.23.01.46.03.69.05h0c.11,0,.23.02.34.03h0c.11,0,.23.02.34.03h0c.11.01.22.02.33.03h0c.11.01.22.02.33.04.11.01.22.03.33.04h0c.11.01.22.03.32.04h0c.11.02.21.03.32.05h0c.11.02.21.03.32.05h0c.1.02.21.04.31.05.1.02.21.04.31.06.1.02.2.04.31.06.1.02.2.04.3.07.1.02.2.05.3.07.2.05.39.1.58.16.1.03.19.06.28.09,7,2.2,7,7.24,0,9.44-.09.03-.19.06-.28.09-.19.06-.39.11-.58.16-.1.02-.2.05-.3.07-.1.02-.2.05-.3.07-.1.02-.2.04-.31.06-.1.02-.21.04-.31.06-.1.02-.21.04-.31.05h0c-.1.02-.21.03-.32.05h0c-.11.02-.21.03-.32.05h0c-.11.02-.22.03-.32.04h0c-.11.01-.22.03-.33.04-.11.01-.22.03-.33.04h0c-.11.01-.22.02-.33.03h0c-.11.01-.22.02-.34.03h0c-.11,0-.23.02-.34.03h0c-.23.02-.46.03-.69.05h0c-.12,0-.23.01-.35.02h0c-.12,0-.23.01-.35.02h0c-.24.01-.47.02-.71.03h0c-.12,0-.24,0-.36.01h0c-.12,0-.24,0-.36,0h0c-.12,0-.24,0-.36,0h0c-.12,0-.24,0-.37,0h0c-.25,0-.49,0-.74,0h0c-.12,0-.25,0-.37,0h0c-.12,0-.25,0-.37,0h0c-.25,0-.5,0-.76,0h0c-.13,0-.25,0-.38,0h0c-.13,0-.25,0-.38,0h0c-.13,0-.26,0-.38,0h-.38s0,0,0,0c-.13,0-.26,0-.39,0h0c-.13,0-.26,0-.39,0h0c-.13,0-.26,0-.39,0h0s-.01,0-.02,0h0l-36.67-1.5c-.59-.02-1.07-.5-1.07-1.09v-.83h0ZM46.23,27.57h0s.01,0,.02,0h-.02Z" />
+                    </svg>
+                </div>
+                <div class="apt" id="aptTo">KSEA</div>
+            </div>
+            <div class="row-bottom">
+                <div class="metric">
+                    <div class="value" id="distance">7321 ki</div>
+                    <div class="caption">DISTANCE</div>
+                </div>
+                <div class="metric">
+                    <div class="value" id="sob">0132</div>
+                    <div class="caption">SOULS ON BOARD</div>
+                </div>
+                <div class="metric">
+                    <div class="value" id="altitude">23100</div>
+                    <div class="caption">ALTITUDE</div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <script>
+    // —— tiny “panel controller” so you can later swap in real API data ——
+    const panelEl = document.getElementById("panel");
+    const powerEl = document.getElementById("masterPower");
+    const typeRadios = Array.from(
+        document.querySelectorAll('input[name="atype"]')
+    );
+
+    // Text fields (OLED)
+    const elFrom = document.getElementById("aptFrom");
+    const elTo = document.getElementById("aptTo");
+    const elDist = document.getElementById("distance");
+    const elSob = document.getElementById("sob");
+    const elAlt = document.getElementById("altitude");
+
+    // Power toggle -> adds/removes .powered
+    powerEl.addEventListener("change", () => {
+        panelEl.classList.toggle("powered", powerEl.checked);
+    });
+
+    // Aircraft type selection -> updates data-type
+    typeRadios.forEach((r) =>
+        r.addEventListener("change", () => {
+            if (r.checked) panelEl.dataset.type = r.value; // civ | com | mil
+        })
+    );
+
+    // Example: a function you’ll call with API data
+    function updatePanelFromApi(data) {
+        // Expecting: { power:boolean, type:'civ'|'com'|'mil', origin:'XXXX', destination:'YYYY', distance:string, sob:string|number, altitude:string|number }
+        if (typeof data.power === "boolean") {
+            powerEl.checked = data.power;
+            panelEl.classList.toggle("powered", data.power);
+        }
+        if (data.type) {
+            const radio = typeRadios.find((x) => x.value === data.type);
+            if (radio) {
+                radio.checked = true;
+                panelEl.dataset.type = data.type;
+            }
+        }
+        if (data.origin) elFrom.textContent = data.origin.toUpperCase();
+        if (data.destination)
+            elTo.textContent = data.destination.toUpperCase();
+        if (data.distance != null)
+            elDist.textContent = String(data.distance);
+        if (data.sob != null)
+            elSob.textContent = String(data.sob).padStart(4, "0");
+        if (data.altitude != null)
+            elAlt.textContent = String(data.altitude);
+    }
+
+    // Demo button to simulate an API payload
+    document.getElementById("loadSample").addEventListener("click", () => {
+        const samples = [
+            // --- COMMERCIAL ---
+            { type: "com", origin: "KJFK", destination: "KLAX", distance: "3971ki", sob: "0182", altitude: 37000 },
+            { type: "com", origin: "EGLL", destination: "KJFK", distance: "5560ki", sob: "0289", altitude: 38000 },
+            { type: "com", origin: "KLAX", destination: "PHNL", distance: "4114ki", sob: "0212", altitude: 36000 },
+            { type: "com", origin: "RJTT", destination: "RKSI", distance: "1170ki", sob: "0164", altitude: 35000 },
+            { type: "com", origin: "OMDB", destination: "EGLL", distance: "5485ki", sob: "0328", altitude: 39000 },
+            { type: "com", origin: "YSSY", destination: "NZAA", distance: "2148ki", sob: "0178", altitude: 36000 },
+            { type: "com", origin: "CYYZ", destination: "CYVR", distance: "3326ki", sob: "0204", altitude: 37000 },
+            { type: "com", origin: "KSEA", destination: "KSFO", distance: "1035ki", sob: "0152", altitude: 33000 },
+            { type: "com", origin: "LFPG", destination: "LIRF", distance: "1266ki", sob: "0168", altitude: 34000 },
+            { type: "com", origin: "EDDF", destination: "FAOR", distance: "8992ki", sob: "0296", altitude: 40000 },
+            { type: "com", origin: "VIDP", destination: "VABB", distance: "1116ki", sob: "0176", altitude: 35000 },
+            { type: "com", origin: "HKJK", destination: "EHAM", distance: "6480ki", sob: "0274", altitude: 38000 },
+            { type: "com", origin: "MMMX", destination: "KIAH", distance: "1165ki", sob: "0162", altitude: 34000 },
+            { type: "com", origin: "ZBAA", destination: "RJAA", distance: "1983ki", sob: "0234", altitude: 37000 },
+            { type: "com", origin: "KATL", destination: "KBOS", distance: "1487ki", sob: "0176", altitude: 36000 },
+            { type: "com", origin: "KSFO", destination: "KORD", distance: "2754ki", sob: "0188", altitude: 37000 },
+            { type: "com", origin: "LEMD", destination: "LPPT", distance: "0505ki", sob: "0148", altitude: 31000 },
+            { type: "com", origin: "WSSS", destination: "VHHH", distance: "2472ki", sob: "0238", altitude: 38000 },
+
+            // --- CIVIL / GA ---
+            { type: "civ", origin: "KAPA", destination: "KSLC", distance: "0556ki", sob: "0003", altitude: 11500 },
+            { type: "civ", origin: "KSDL", destination: "KVNY", distance: "0550ki", sob: "0004", altitude: 10500 },
+            { type: "civ", origin: "KSEA", destination: "KPDX", distance: "0217ki", sob: "0002", altitude: 6500 },
+            { type: "civ", origin: "KTIX", destination: "KEYW", distance: "0446ki", sob: "0002", altitude: 8500 },
+            { type: "civ", origin: "CYTZ", destination: "CYUL", distance: "0476ki", sob: "0005", altitude: 11500 },
+            { type: "civ", origin: "ENBR", destination: "ENGM", distance: "0296ki", sob: "0006", altitude: 12000 },
+            { type: "civ", origin: "EGKB", destination: "EGNH", distance: "0341ki", sob: "0003", altitude: 9500 },
+            { type: "civ", origin: "NZWN", destination: "NZCH", distance: "0293ki", sob: "0004", altitude: 11000 },
+            { type: "civ", origin: "KFHR", destination: "KORS", distance: "0044ki", sob: "0002", altitude: 3500 },
+            { type: "civ", origin: "KTRK", destination: "KRNO", distance: "0043ki", sob: "0002", altitude: 9500 },
+            { type: "civ", origin: "EDDM", destination: "LOWW", distance: "0356ki", sob: "0005", altitude: 12000 },
+            { type: "civ", origin: "LFML", destination: "LEBL", distance: "0317ki", sob: "0004", altitude: 11500 },
+
+            // --- MILITARY ---
+            { type: "mil", origin: "KRND", destination: "KDMA", distance: "1935ki", sob: "0072", altitude: 21000 },
+            { type: "mil", origin: "KADW", destination: "EGUL", distance: "5685ki", sob: "0128", altitude: 28000 },
+            { type: "mil", origin: "KVBG", destination: "PHIK", distance: "3877ki", sob: "0058", altitude: 24000 },
+            { type: "mil", origin: "RJTY", destination: "RODN", distance: "1261ki", sob: "0092", altitude: 25000 },
+            { type: "mil", origin: "ETAR", destination: "LCRA", distance: "3218ki", sob: "0110", altitude: 27000 },
+            { type: "mil", origin: "EGVN", destination: "LERT", distance: "1578ki", sob: "0068", altitude: 23000 },
+            { type: "mil", origin: "KTIK", destination: "KDMA", distance: "1927ki", sob: "0084", altitude: 26000 },
+            { type: "mil", origin: "KSUU", destination: "PANC", distance: "3460ki", sob: "0096", altitude: 27000 },
+            { type: "mil", origin: "CYOD", destination: "CYYR", distance: "3071ki", sob: "0102", altitude: 26000 },
+            { type: "mil", origin: "FAWK", destination: "HBBA", distance: "2516ki", sob: "0088", altitude: 24000 },
+            { type: "mil", origin: "VTBU", destination: "VVTS", distance: "0793ki", sob: "0044", altitude: 22000 },
+            { type: "mil", origin: "OEDF", destination: "OJMS", distance: "1200ki", sob: "0076", altitude: 25000 },
+
+            // --- MIXED SHORT / LONG HAULS ---
+            { type: "com", origin: "KDEN", destination: "KIAD", distance: "2295ki", sob: "0170", altitude: 36000 },
+            { type: "com", origin: "SBGR", destination: "KMIA", distance: "6194ki", sob: "0260", altitude: 39000 },
+            { type: "civ", origin: "KSBA", destination: "KSAN", distance: "0333ki", sob: "0002", altitude: 9500 },
+            { type: "mil", origin: "UHPP", destination: "RJCC", distance: "1209ki", sob: "0074", altitude: 24000 },
+            { type: "com", origin: "VTBS", destination: "WMKK", distance: "1198ki", sob: "0198", altitude: 36000 },
+            { type: "civ", origin: "PAEN", destination: "PANC", distance: "0218ki", sob: "0004", altitude: 8500 },
+            { type: "mil", origin: "LPLA", destination: "LPPT", distance: "1451ki", sob: "0090", altitude: 26000 }
+        ];
+
+        const randomIndex = Math.floor(Math.random() * samples.length);
+        updatePanelFromApi(samples[randomIndex]);
+    });
+
+    // Initial state for the demo
+    updatePanelFromApi({ power: false });
+    </script>
+</body>
+
+</html>
